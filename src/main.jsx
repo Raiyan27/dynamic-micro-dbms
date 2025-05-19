@@ -4,7 +4,8 @@ import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Layout from "./layout";
 import HomePage from "./pages/HomePage";
-import Payroll_Info from "./pages/Payroll_Info";
+
+import PayrollPage from "./pages/PayrollPage";
 
 const router = createBrowserRouter([
   {
@@ -17,7 +18,7 @@ const router = createBrowserRouter([
       },
       {
         path: "/payroll",
-        element: <Payroll_Info />,
+        element: <PayrollPage />,
       },
     ],
   },

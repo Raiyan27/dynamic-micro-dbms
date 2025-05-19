@@ -12,13 +12,13 @@ const Navbar = () => {
         {/* Desktop Menu */}
         <ul className="hidden md:flex space-x-6 text-sm font-medium">
           <li>
-            <a href="#employee" className="hover:text-gray-300 transition">
-              Employee Profile
-            </a>
+            <Link to="/" className="hover:text-gray-300 transition">
+              Employee Management
+            </Link>
           </li>
           <li>
-            <Link to="/payment" className="hover:text-gray-300 transition">
-              Payment Profile
+            <Link to="/payroll" className="hover:text-gray-300 transition">
+              Payroll Management
             </Link>
           </li>
         </ul>
@@ -37,18 +37,15 @@ const Navbar = () => {
       {/* Mobile Menu */}
       {isOpen && (
         <div className="md:hidden mt-2 space-y-2 px-2">
-          <a
-            href="#employee"
+          <Link to="/" className="block py-2 px-3 rounded hover:bg-gray-700">
+            Employee management
+          </Link>
+          <Link
+            to="/payroll"
             className="block py-2 px-3 rounded hover:bg-gray-700"
           >
-            Employee Profile
-          </a>
-          <a
-            href="#payroll"
-            className="block py-2 px-3 rounded hover:bg-gray-700"
-          >
-            Payment Profile
-          </a>
+            Payroll Management
+          </Link>
         </div>
       )}
     </nav>
