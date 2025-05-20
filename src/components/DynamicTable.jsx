@@ -1,7 +1,7 @@
 import {
   Edit3,
   Trash2,
-  Eye as ViewIcon,
+  FileText as ViewIcon,
   ExternalLink as ManagePayrollIcon,
 } from "lucide-react";
 import StatusBadge from "./StatusBadge";
@@ -76,6 +76,13 @@ const DynamicTable = ({
                         if (moduleType === "employee" && col.key === "status") {
                           return <StatusBadge status={val} />;
                         }
+
+                        if (
+                          moduleType === "payroll" &&
+                          col.key === "payrollStatus"
+                        ) {
+                          return val || "N/A";
+                        }
                         if (col.type === "date" && val) {
                           const dateVal = String(val).includes("T")
                             ? val
@@ -90,12 +97,19 @@ const DynamicTable = ({
                         if (
                           moduleType === "payroll" &&
                           col.type === "number" &&
-                          typeof val === "number"
+                          typeof val === "number" &&
+                          !col.key.toLowerCase().includes("percentage")
                         ) {
                           return val.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
+                            style: "currency",
+                            currency: "USD",
                           });
+                        }
+                        if (
+                          col.key.toLowerCase().includes("percentage") &&
+                          typeof val === "number"
+                        ) {
+                          return `${val}%`;
                         }
                         return val === undefined ||
                           val === null ||
@@ -107,10 +121,14 @@ const DynamicTable = ({
                   );
                 })}
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex items-center">
-                  {onViewDetails && moduleType === "employee" && (
+                  {onViewDetails && (
                     <button
                       onClick={() => onViewDetails(item)}
-                      title="View Details"
+                      title={`View ${
+                        moduleType === "employee"
+                          ? "Details"
+                          : "Payroll Details"
+                      }`}
                       className="text-blue-600 hover:text-blue-900"
                     >
                       <ViewIcon size={18} />
@@ -125,7 +143,8 @@ const DynamicTable = ({
                       <Edit3 size={18} />
                     </button>
                   )}
-                  {onDelete && (
+
+                  {onDelete && moduleType === "employee" && (
                     <button
                       onClick={() => onDelete(item[idKey])}
                       title={`Delete ${moduleType}`}
@@ -134,6 +153,7 @@ const DynamicTable = ({
                       <Trash2 size={18} />
                     </button>
                   )}
+
                   {moduleType === "employee" && onManagePayroll && (
                     <button
                       onClick={() =>

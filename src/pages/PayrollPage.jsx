@@ -5,6 +5,7 @@ import DynamicTable from "../components/DynamicTable";
 import PaginationControls from "../components/PaginationControls";
 import ColumnTogglerModal from "../modals/ColumnTogglerModal";
 import PayrollRecordModal from "../modals/PayrollRecordModal";
+import PayrollDetailViewModal from "../modals/PayrollDetailModal";
 
 const PayrollPage = () => {
   const [allPayrollFields, setAllPayrollFields] = useState([]);
@@ -18,6 +19,11 @@ const PayrollPage = () => {
   const [currentEditingPayroll, setCurrentEditingPayroll] = useState(null);
   const [currentEditingEmployeeFullName, setCurrentEditingEmployeeFullName] =
     useState("");
+
+  // State for Payroll View Details Modal
+  const [isPayrollViewModalOpen, setIsPayrollViewModalOpen] = useState(false);
+  const [payrollToView, setPayrollToView] = useState(null);
+  const [employeeFullNameForView, setEmployeeFullNameForView] = useState("");
 
   const [isColumnTogglerModalOpen, setIsColumnTogglerModalOpen] =
     useState(false);
@@ -106,7 +112,6 @@ const PayrollPage = () => {
     return enrichedPayrollData.filter((item) =>
       allPayrollFields.some((field) => {
         const value = item[field.key];
-
         const checkValues = [value, item.employeeFullName];
         return checkValues.some(
           (v) =>
@@ -122,23 +127,19 @@ const PayrollPage = () => {
     const potentialTableColumns = allPayrollFields.filter(
       (field) => !field.isHidden
     );
-
     let displayKeys = [...visiblePayrollColumnKeys];
-
     potentialTableColumns.forEach((field) => {
       if (field.alwaysVisibleInPayroll && !displayKeys.includes(field.key)) {
         displayKeys.unshift(field.key);
       }
     });
     displayKeys = [...new Set(displayKeys)];
-
     return displayKeys
       .map((key) => potentialTableColumns.find((field) => field.key === key))
       .filter(Boolean)
       .sort((a, b) => {
         if (a.key === "employeeId") return -1;
         if (b.key === "employeeId") return 1;
-
         const indexA = allPayrollFields.findIndex((f) => f.key === a.key);
         const indexB = allPayrollFields.findIndex((f) => f.key === b.key);
         return indexA - indexB;
@@ -158,12 +159,11 @@ const PayrollPage = () => {
     return filteredPayrollData.slice(startIndex, startIndex + ROWS_PER_PAGE);
   }, [filteredPayrollData, currentPage, ROWS_PER_PAGE]);
 
+  // For Editing Payroll
   const handleEditPayroll = (payrollItem) => {
     setCurrentEditingPayroll(payrollItem);
-    const emp = employeeData.find(
-      (e) => e.employeeId === payrollItem.employeeId
-    );
-    setCurrentEditingEmployeeFullName(emp ? emp.fullName : "N/A");
+    // employeeFullName is already part of payrollItem from enrichedPayrollData
+    setCurrentEditingEmployeeFullName(payrollItem.employeeFullName || "N/A");
     setIsPayrollModalOpen(true);
   };
 
@@ -172,8 +172,8 @@ const PayrollPage = () => {
     try {
       await api.addOrUpdatePayroll(payrollDataToSave);
       setError(null);
-      setIsPayrollModalOpen(false);
-      await fetchData();
+      setIsPayrollModalOpen(false); // Close edit modal
+      await fetchData(); // Refresh data
       alert("Payroll data updated successfully!");
     } catch (err) {
       console.error("Failed to save payroll:", err);
@@ -181,6 +181,20 @@ const PayrollPage = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // For Viewing Payroll Details
+  const handleOpenPayrollViewModal = (payrollItem) => {
+    setPayrollToView(payrollItem);
+    // employeeFullName is already part of payrollItem from enrichedPayrollData
+    setEmployeeFullNameForView(payrollItem.employeeFullName || "N/A");
+    setIsPayrollViewModalOpen(true);
+  };
+
+  const handleClosePayrollViewModal = () => {
+    setIsPayrollViewModalOpen(false);
+    setPayrollToView(null);
+    setEmployeeFullNameForView("");
   };
 
   const toggleableColumns = useMemo(() => {
@@ -246,6 +260,7 @@ const PayrollPage = () => {
             columns={columnsToDisplayForPayroll}
             data={paginatedPayrollData}
             onEdit={handleEditPayroll}
+            onViewDetails={handleOpenPayrollViewModal} // Pass the new handler
             idKey="internalId"
             moduleType="payroll"
           />
@@ -257,6 +272,7 @@ const PayrollPage = () => {
         </>
       )}
 
+      {/* Payroll Edit Modal */}
       {isPayrollModalOpen &&
         currentEditingPayroll &&
         allPayrollFields.length > 0 && (
@@ -267,6 +283,19 @@ const PayrollPage = () => {
             employeeId={currentEditingPayroll.employeeId}
             employeeFullName={currentEditingEmployeeFullName}
             existingPayrollData={currentEditingPayroll}
+            payrollSchema={allPayrollFields}
+          />
+        )}
+
+      {/* Payroll View Details Modal */}
+      {isPayrollViewModalOpen &&
+        payrollToView &&
+        allPayrollFields.length > 0 && (
+          <PayrollDetailViewModal
+            isOpen={isPayrollViewModalOpen}
+            onClose={handleClosePayrollViewModal}
+            payrollRecord={payrollToView}
+            employeeFullName={employeeFullNameForView}
             payrollSchema={allPayrollFields}
           />
         )}
