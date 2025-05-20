@@ -1,9 +1,100 @@
 import { generateInternalId as generateNewInternalId } from "./utils/helpers";
+import { calculatePayrollMetrics as calculateDummyPayrollMetrics } from "./utils/helpers";
 
 const EMPLOYEE_DATA_KEY = "EmployeeData";
 const PAYROLL_DATA_KEY = "PayrollData";
 const VISIBLE_EMPLOYEE_COLUMNS_KEY = "visibleEmployeeColumns";
 const VISIBLE_PAYROLL_COLUMNS_KEY = "visiblePayrollColumns";
+
+const createDummyEmployees = () => {
+  const dummyEmployees = [
+    {
+      employeeId: "E001",
+      fullName: "John Doe",
+      department: "IT",
+      jobTitle: "Web Developer",
+      dateOfJoining: "2022-01-15",
+      email: "JohnDoe@example.com",
+      phoneNumber: "123-456-7890",
+      status: "Active",
+    },
+    {
+      employeeId: "E002",
+      fullName: "Kate Smith",
+      department: "HR",
+      jobTitle: "Senior HR Manage",
+      dateOfJoining: "2021-05-20",
+      email: "KateSmith@example.com",
+      phoneNumber: "987-654-3210",
+      status: "Active",
+    },
+    {
+      employeeId: "E003",
+      fullName: "Charlie Brown",
+      department: "Animation",
+      jobTitle: "Motion Graphic Artist",
+      dateOfJoining: "2023-03-10",
+      email: "charlie@example.com",
+      phoneNumber: "555-123-4567",
+      status: "On Leave",
+    },
+    {
+      employeeId: "E004",
+      fullName: "Harvy Dent",
+      department: "Legal",
+      jobTitle: "Assitant Lawyer",
+      dateOfJoining: "2020-11-01",
+      email: "diana@example.com",
+      phoneNumber: "111-222-3333",
+      status: "Active",
+    },
+  ];
+  return dummyEmployees.map((emp) => ({
+    ...emp,
+    internalId: generateNewInternalId(),
+  }));
+};
+
+const createDummyPayrolls = (employees, payrollSchema) => {
+  return employees
+    .filter((emp) => emp.status !== "Terminated")
+    .map((emp) => {
+      const basicSalary = Math.floor(Math.random() * (8000 - 3000 + 1) + 3000);
+      let disbursementDate = new Date();
+      disbursementDate.setDate(1);
+
+      let payrollStatus = "Pending";
+      if (Math.random() < 0.6) payrollStatus = "Paid";
+      else if (Math.random() < 0.8) payrollStatus = "Processed";
+
+      const payrollInput = {
+        employeeId: emp.employeeId,
+        basicSalary: basicSalary,
+        houseRentAllowancePercentage:
+          payrollSchema.find((f) => f.key === "houseRentAllowancePercentage")
+            ?.defaultValue || 40,
+        medicalAllowancePercentage:
+          payrollSchema.find((f) => f.key === "medicalAllowancePercentage")
+            ?.defaultValue || 10,
+        conveyanceAllowanceFixed:
+          Math.random() > 0.5 ? Math.floor(Math.random() * 200) : 0,
+        telephoneAllowanceFixed:
+          Math.random() > 0.3 ? Math.floor(Math.random() * 100) : 0,
+        specialAllowanceFixed:
+          Math.random() > 0.7 ? Math.floor(Math.random() * 500) : 0,
+        otherAllowancesFixed: 0,
+        incomeTaxPercentage:
+          payrollSchema.find((f) => f.key === "incomeTaxPercentage")
+            ?.defaultValue || 10,
+        otherDeductionsFixed:
+          Math.random() > 0.8 ? Math.floor(Math.random() * 50) : 0,
+        disbursementDate: disbursementDate.toISOString().split("T")[0],
+        payrollStatus: payrollStatus,
+        internalId: generateNewInternalId(),
+      };
+      return calculateDummyPayrollMetrics(payrollInput);
+    });
+};
 
 const defaultEmployeeSchema = [
   {
@@ -191,8 +282,16 @@ const defaultPayrollSchema = [
 export const api = {
   fetchEmployeeSchema: async () => Promise.resolve(defaultEmployeeSchema),
   fetchEmployees: async () => {
-    const savedData = localStorage.getItem(EMPLOYEE_DATA_KEY);
-    return Promise.resolve(savedData ? JSON.parse(savedData) : []);
+    let savedData = localStorage.getItem(EMPLOYEE_DATA_KEY);
+    if (savedData === null) {
+      console.log(
+        "API: No employee data found in localStorage. Creating dummy employees."
+      );
+      const dummyEmployees = createDummyEmployees();
+      localStorage.setItem(EMPLOYEE_DATA_KEY, JSON.stringify(dummyEmployees));
+      return Promise.resolve(dummyEmployees);
+    }
+    return Promise.resolve(JSON.parse(savedData));
   },
   addEmployee: async (employeeData) => {
     const newEmployee = {
@@ -223,8 +322,25 @@ export const api = {
 
   fetchPayrollSchema: async () => Promise.resolve(defaultPayrollSchema),
   fetchPayrolls: async () => {
-    const savedData = localStorage.getItem(PAYROLL_DATA_KEY);
-    return Promise.resolve(savedData ? JSON.parse(savedData) : []);
+    let savedPayrollData = localStorage.getItem(PAYROLL_DATA_KEY);
+    if (savedPayrollData === null) {
+      console.log(
+        "API: No payroll data found in localStorage. Creating dummy payrolls."
+      );
+      const employees = await api.fetchEmployees();
+      if (employees.length > 0) {
+        const dummyPayrolls = createDummyPayrolls(
+          employees,
+          defaultPayrollSchema
+        );
+        localStorage.setItem(PAYROLL_DATA_KEY, JSON.stringify(dummyPayrolls));
+        return Promise.resolve(dummyPayrolls);
+      } else {
+        localStorage.setItem(PAYROLL_DATA_KEY, JSON.stringify([]));
+        return Promise.resolve([]);
+      }
+    }
+    return Promise.resolve(JSON.parse(savedPayrollData));
   },
   fetchPayrollByEmployeeId: async (employeeId) => {
     const payrolls = await api.fetchPayrolls();
@@ -242,10 +358,13 @@ export const api = {
     if (existingPayrollIndex > -1) {
       const originalPayroll = payrolls[existingPayrollIndex];
       let dataToSave = { ...payrollData };
+      const disbursementDateSchema = defaultPayrollSchema.find(
+        (f) => f.key === "disbursementDate"
+      );
       if (
         originalPayroll.disbursementDate &&
-        !defaultPayrollSchema.find((f) => f.key === "disbursementDate")
-          .isEditableAfterCreation
+        disbursementDateSchema &&
+        !disbursementDateSchema.isEditableAfterCreation
       ) {
         dataToSave.disbursementDate = originalPayroll.disbursementDate;
       }
@@ -267,7 +386,20 @@ export const api = {
 
   getVisibleEmployeeColumns: () => {
     const saved = localStorage.getItem(VISIBLE_EMPLOYEE_COLUMNS_KEY);
-    return saved ? JSON.parse(saved) : null;
+    if (saved === null) {
+      const defaultKeys = defaultEmployeeSchema
+        .filter(
+          (f) =>
+            ["employeeId", "fullName", "department", "status"].includes(
+              f.key
+            ) && !f.isHidden
+        )
+        .map((f) => f.key);
+      return defaultKeys.length > 0
+        ? defaultKeys
+        : defaultEmployeeSchema.slice(0, 4).map((f) => f.key);
+    }
+    return JSON.parse(saved);
   },
   saveVisibleEmployeeColumns: (keys) => {
     localStorage.setItem(VISIBLE_EMPLOYEE_COLUMNS_KEY, JSON.stringify(keys));
@@ -275,9 +407,7 @@ export const api = {
   getVisiblePayrollColumns: () => {
     const saved = localStorage.getItem(VISIBLE_PAYROLL_COLUMNS_KEY);
     let visibleKeys;
-    if (saved) {
-      visibleKeys = JSON.parse(saved);
-    } else {
+    if (saved === null) {
       visibleKeys = defaultPayrollSchema
         .filter(
           (f) =>
@@ -291,9 +421,14 @@ export const api = {
             ].includes(f.key)
         )
         .map((f) => f.key);
+    } else {
+      visibleKeys = JSON.parse(saved);
     }
 
-    if (!visibleKeys.includes("employeeId")) {
+    const employeeIdField = defaultPayrollSchema.find(
+      (f) => f.key === "employeeId" && f.alwaysVisibleInPayroll
+    );
+    if (employeeIdField && !visibleKeys.includes("employeeId")) {
       visibleKeys.unshift("employeeId");
     }
     return [...new Set(visibleKeys)];
