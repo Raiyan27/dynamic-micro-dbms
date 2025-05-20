@@ -1,9 +1,9 @@
 import { generateInternalId as generateNewInternalId } from "./utils/helpers";
 
-const EMPLOYEE_DATA_KEY = "simulatedEmployeeData_vNext";
-const PAYROLL_DATA_KEY = "simulatedPayrollData_v2";
-const VISIBLE_EMPLOYEE_COLUMNS_KEY = "visibleEmployeeColumns_vNext";
-const VISIBLE_PAYROLL_COLUMNS_KEY = "visiblePayrollColumns_v2";
+const EMPLOYEE_DATA_KEY = "EmployeeData";
+const PAYROLL_DATA_KEY = "PayrollData";
+const VISIBLE_EMPLOYEE_COLUMNS_KEY = "visibleEmployeeColumns";
+const VISIBLE_PAYROLL_COLUMNS_KEY = "visiblePayrollColumns";
 
 const defaultEmployeeSchema = [
   {

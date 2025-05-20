@@ -1,4 +1,4 @@
-import { Edit3, Trash2, ExternalLink as ManagePayrollIcon } from "lucide-react"; // Renamed for clarity
+import { Edit3, Trash2, ExternalLink as ManagePayrollIcon } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 
 const DynamicTable = ({
@@ -67,7 +67,11 @@ const DynamicTable = ({
                     >
                       {(() => {
                         const val = item[col.key];
-                        if (moduleType === "employee" && col.key === "status") {
+                        if (
+                          (moduleType === "employee" ||
+                            moduleType === "payroll") &&
+                          (col.key === "status" || col.key === "payrollStatus")
+                        ) {
                           return <StatusBadge status={val} />;
                         }
                         if (col.type === "date" && val) {

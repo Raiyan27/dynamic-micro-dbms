@@ -27,7 +27,7 @@ const HomePage = () => {
   const [existingPayrollDataForModal, setExistingPayrollDataForModal] =
     useState(null);
   const [payrollSchema, setPayrollSchema] = useState([]);
-  const [isMandatoryPayrollSetup, setIsMandatoryPayrollSetup] = useState(false); // New state
+  const [isMandatoryPayrollSetup, setIsMandatoryPayrollSetup] = useState(false);
 
   const [isColumnTogglerModalOpen, setIsColumnTogglerModalOpen] =
     useState(false);
@@ -386,9 +386,9 @@ const HomePage = () => {
             data={paginatedData}
             onEdit={handleOpenEmployeeModal}
             onDelete={handleDeleteEmployee}
-            onManagePayroll={(empId, empName) =>
-              handleOpenPayrollModal(empId, empName, null)
-            }
+            // onManagePayroll={(empId, empName) =>
+            //   handleOpenPayrollModal(empId, empName, null)
+            // }
             idKey="internalId"
             moduleType="employee"
           />

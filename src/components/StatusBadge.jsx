@@ -1,5 +1,3 @@
-import React from "react";
-
 const StatusBadge = ({ status }) => {
   let badgeClasses =
     "px-2.5 py-0.5 rounded-full text-xs font-medium capitalize inline-block ";
@@ -12,6 +10,21 @@ const StatusBadge = ({ status }) => {
       badgeClasses += "bg-yellow-100 text-yellow-800";
       break;
     case "Terminated":
+      badgeClasses += "bg-red-100 text-red-800";
+      break;
+    case "Processed":
+      badgeClasses += "bg-green-100 text-green-600";
+      break;
+    case "Paid":
+      badgeClasses += "bg-green-100 text-green-800";
+      break;
+    case "Pending":
+      badgeClasses += "bg-amber-100 text-amber-600";
+      break;
+    case "On Hold":
+      badgeClasses += "bg-orange-100 text-orange-600";
+      break;
+    case "Cancelled":
       badgeClasses += "bg-red-100 text-red-800";
       break;
     default:
