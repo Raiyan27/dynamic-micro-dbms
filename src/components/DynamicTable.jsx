@@ -1,4 +1,9 @@
-import { Edit3, Trash2, ExternalLink as ManagePayrollIcon } from "lucide-react";
+import {
+  Edit3,
+  Trash2,
+  Eye as ViewIcon,
+  ExternalLink as ManagePayrollIcon,
+} from "lucide-react";
 import StatusBadge from "./StatusBadge";
 
 const DynamicTable = ({
@@ -6,6 +11,7 @@ const DynamicTable = ({
   data,
   onEdit,
   onDelete,
+  onViewDetails,
   onManagePayroll,
   idKey = "internalId",
   moduleType = "employee",
@@ -67,11 +73,7 @@ const DynamicTable = ({
                     >
                       {(() => {
                         const val = item[col.key];
-                        if (
-                          (moduleType === "employee" ||
-                            moduleType === "payroll") &&
-                          (col.key === "status" || col.key === "payrollStatus")
-                        ) {
+                        if (moduleType === "employee" && col.key === "status") {
                           return <StatusBadge status={val} />;
                         }
                         if (col.type === "date" && val) {
@@ -85,7 +87,6 @@ const DynamicTable = ({
                                 timeZone: "UTC",
                               });
                         }
-
                         if (
                           moduleType === "payroll" &&
                           col.type === "number" &&
@@ -106,6 +107,15 @@ const DynamicTable = ({
                   );
                 })}
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 flex items-center">
+                  {onViewDetails && moduleType === "employee" && (
+                    <button
+                      onClick={() => onViewDetails(item)}
+                      title="View Details"
+                      className="text-blue-600 hover:text-blue-900"
+                    >
+                      <ViewIcon size={18} />
+                    </button>
+                  )}
                   {onEdit && (
                     <button
                       onClick={() => onEdit(item)}

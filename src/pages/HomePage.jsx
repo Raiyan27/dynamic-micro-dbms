@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+
 import { Plus, Eye } from "lucide-react";
 import { api } from "../api";
 import { generateNextEmployeeId } from "../utils/helpers";
@@ -8,6 +9,7 @@ import PaginationControls from "../components/PaginationControls";
 import ColumnTogglerModal from "../modals/ColumnTogglerModal";
 import EmployeeRecordModal from "../modals/EmployeeRecordModal";
 import PayrollRecordModal from "../modals/PayrollRecordModal";
+import EmployeeDetailViewModal from "../modals/EmployeeDetailModal";
 
 const HomePage = () => {
   const [allProfileFields, setAllProfileFields] = useState([]);
@@ -28,6 +30,10 @@ const HomePage = () => {
     useState(null);
   const [payrollSchema, setPayrollSchema] = useState([]);
   const [isMandatoryPayrollSetup, setIsMandatoryPayrollSetup] = useState(false);
+
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [employeeToView, setEmployeeToView] = useState(null);
+  const [payrollForView, setPayrollForView] = useState(null);
 
   const [isColumnTogglerModalOpen, setIsColumnTogglerModalOpen] =
     useState(false);
@@ -103,10 +109,6 @@ const HomePage = () => {
   };
   const handleCloseEmployeeModal = () => {
     setIsEmployeeModalOpen(false);
-
-    if (isMandatoryPayrollSetup) {
-      // setIsMandatoryPayrollSetup(false);
-    }
   };
 
   const handleSaveEmployee = async (recordDataToSave) => {
@@ -136,16 +138,12 @@ const HomePage = () => {
         setEmployeeData((prev) => [...prev, savedRecord]);
       }
 
-      const currentEmployees = employeeData.map((emp) =>
-        emp.internalId === savedRecord.internalId ? savedRecord : emp
-      );
-      if (
-        isNewEmployee &&
-        !currentEmployees.find((e) => e.internalId === savedRecord.internalId)
-      ) {
-        currentEmployees.push(savedRecord);
-      }
-      setNextEmployeeIdToUse(generateNextEmployeeId(currentEmployees));
+      const currentEmployeesList = isNewEmployee
+        ? [...employeeData, savedRecord]
+        : employeeData.map((emp) =>
+            emp.internalId === savedRecord.internalId ? savedRecord : emp
+          );
+      setNextEmployeeIdToUse(generateNextEmployeeId(currentEmployeesList));
 
       setError(null);
       handleCloseEmployeeModal();
@@ -161,7 +159,7 @@ const HomePage = () => {
     } catch (err) {
       console.error("Failed to save employee:", err);
       setError("Failed to save employee: " + err.message);
-      setIsMandatoryPayrollSetup(false);
+      if (isNewEmployee) setIsMandatoryPayrollSetup(false);
     } finally {
       setIsLoading(false);
     }
@@ -215,16 +213,17 @@ const HomePage = () => {
     setIsLoading(true);
     try {
       const payrollToEdit =
-        existingData || (await api.fetchPayrollByEmployeeId(employeeId));
+        existingData === null && !isMandatoryPayrollSetup
+          ? await api.fetchPayrollByEmployeeId(employeeId)
+          : existingData;
 
       setExistingPayrollDataForModal(payrollToEdit);
       setCurrentPayrollEmployeeId(employeeId);
       setCurrentPayrollEmployeeFullName(employeeFullName);
-
       setIsPayrollModalOpen(true);
     } catch (err) {
       setError("Failed to load payroll data: " + err.message);
-      setIsMandatoryPayrollSetup(false);
+      if (isMandatoryPayrollSetup) setIsMandatoryPayrollSetup(false);
     } finally {
       setIsLoading(false);
     }
@@ -232,7 +231,10 @@ const HomePage = () => {
 
   const handleClosePayrollModal = () => {
     setIsPayrollModalOpen(false);
-    setIsMandatoryPayrollSetup(false);
+
+    if (isMandatoryPayrollSetup) {
+      setIsMandatoryPayrollSetup(false);
+    }
     setExistingPayrollDataForModal(null);
   };
 
@@ -244,10 +246,6 @@ const HomePage = () => {
     try {
       await api.addOrUpdatePayroll(payrollDataToSave);
       setError(null);
-
-      if (isMandatoryPayrollSetup) {
-        setIsMandatoryPayrollSetup(false);
-      }
       handleClosePayrollModal();
 
       const message = isInitialSetupFlowFromModal
@@ -260,6 +258,26 @@ const HomePage = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleOpenViewModal = async (employee) => {
+    setIsLoading(true);
+    try {
+      const payroll = await api.fetchPayrollByEmployeeId(employee.employeeId);
+      setEmployeeToView(employee);
+      setPayrollForView(payroll);
+      setIsViewModalOpen(true);
+    } catch (err) {
+      setError("Failed to load details for viewing: " + err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+    setEmployeeToView(null);
+    setPayrollForView(null);
   };
 
   const filteredEmployeeData = useMemo(() => {
@@ -309,7 +327,11 @@ const HomePage = () => {
     return filteredEmployeeData.slice(startIndex, startIndex + ROWS_PER_PAGE);
   }, [filteredEmployeeData, currentPage, ROWS_PER_PAGE]);
 
-  if (isLoading && allProfileFields.length === 0) {
+  if (
+    isLoading &&
+    allProfileFields.length === 0 &&
+    payrollSchema.length === 0
+  ) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-500 bg-gray-100">
         Loading System...
@@ -375,9 +397,10 @@ const HomePage = () => {
         </div>
       </div>
 
-      {isLoading && allProfileFields.length > 0 && (
-        <div className="text-center text-gray-500 py-4">Processing...</div>
-      )}
+      {isLoading &&
+        (allProfileFields.length > 0 || payrollSchema.length > 0) && (
+          <div className="text-center text-gray-500 py-4">Processing...</div>
+        )}
 
       {!isLoading && (
         <>
@@ -386,9 +409,10 @@ const HomePage = () => {
             data={paginatedData}
             onEdit={handleOpenEmployeeModal}
             onDelete={handleDeleteEmployee}
-            // onManagePayroll={(empId, empName) =>
-            //   handleOpenPayrollModal(empId, empName, null)
-            // }
+            onViewDetails={handleOpenViewModal}
+            onManagePayroll={(empId, empName) =>
+              handleOpenPayrollModal(empId, empName)
+            }
             idKey="internalId"
             moduleType="employee"
           />
@@ -424,6 +448,20 @@ const HomePage = () => {
         />
       )}
 
+      {isViewModalOpen &&
+        employeeToView &&
+        allProfileFields.length > 0 &&
+        payrollSchema.length > 0 && (
+          <EmployeeDetailViewModal
+            isOpen={isViewModalOpen}
+            onClose={handleCloseViewModal}
+            employee={employeeToView}
+            payrollSummary={payrollForView}
+            employeeSchema={allProfileFields}
+            payrollSchema={payrollSchema}
+          />
+        )}
+
       {isColumnTogglerModalOpen && (
         <ColumnTogglerModal
           isOpen={isColumnTogglerModalOpen}
@@ -431,6 +469,7 @@ const HomePage = () => {
           allColumns={allProfileFields.filter((f) => !f.isHidden)}
           visibleColumnKeys={visibleColumnKeys}
           onVisibilityChange={handleColumnVisibilityChange}
+          moduleContext="employee"
         />
       )}
     </div>

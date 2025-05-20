@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Eye } from "lucide-react";
 import { api } from "../api";
 import DynamicTable from "../components/DynamicTable";
